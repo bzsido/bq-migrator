@@ -5,7 +5,7 @@ NEWP="al-bi-bq-test"
 MAX=10000
 TEMPDIR="$HOME/bq-temp"
 
-bq --project-id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//g' | \
+bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//g' | \
 while read DS; do
     
     echo "this is $DS"
