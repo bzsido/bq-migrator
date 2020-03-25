@@ -18,8 +18,10 @@ while read DS; do
         mkdir -p "$DSDIR"
         bq show --format=prettyjson --project-id="$ORIGP" "$DS"."$VIEW" > "$DSDIR/$VIEW.json"
 
+        # hardcoded project name
         QUERY="$(cat "$DSDIR/$VIEW.json" | jq '.view.query' \
-              | sed -z 's/\\n/ /g' | sed -e 's/\"//g')"
+              | sed -z 's/\\n/ /g' | sed -e 's/\"//g' \
+              | sed -e 's/crypto-song-153217/al-bi-bq-test/g')"
 
         bq mk --project_id="$NEWP" --use_legacy_sql=false \
               --view "$QUERY" "$DS"."$VIEW"
