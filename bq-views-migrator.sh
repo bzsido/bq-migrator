@@ -13,16 +13,11 @@ while read DS; do
     bq ls -n "$MAX" "$DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2 | \
     while read VIEW; do
 
-        DSDIR="$TEMPDIR/$DS"
-        
-        mkdir -p "$DSDIR"
-        bq show --format=prettyjson --project-id="$ORIGP" "$DS"."$VIEW" > "$DSDIR/$VIEW.json"
-
         # hardcoded project name
-        QUERY="$(cat "$DSDIR/$VIEW.json" | jq '.view.query' \
-              | sed -z 's/\\n/ /g' | sed -e 's/\"//g' \
-              | sed -e 's/crypto-song-153217/al-bi-bq-test/g')"
+        QUERY="$(bq show --format=sparse --view "$DS"."$VIEW" | tail -n +5 \
+                | sed -e 's/crypto-song-153217/al-bi-bq-test/g')"
 
+        # think about legacy sql param
         bq mk --project_id="$NEWP" --use_legacy_sql=false \
               --view "$QUERY" "$DS"."$VIEW"
     done
