@@ -14,14 +14,14 @@ while read DS; do
     while read VIEW; do
 
         DSDIR="$TEMPDIR/$DS"
-        QFILE="$DSDIR/$VIEW.qfile"
+        
         mkdir -p "$DSDIR"
-
         bq show --format=prettyjson --project-id="$ORIGP" "$DS"."$VIEW" > "$DSDIR/$VIEW.json"
-        cat "$DSDIR/$VIEW.json" | jq '.view.query' \
-            | sed -z 's/\\n/ /g' | sed -e 's/\"//g' > "$QFILE"
+
+        QUERY="$(cat "$DSDIR/$VIEW.json" | jq '.view.query' \
+              | sed -z 's/\\n/ /g' | sed -e 's/\"//g')"
 
         bq mk --project_id="$NEWP" --use_legacy_sql=false \
-              --view_udf_resource "$QFILE" "$DS"."$VIEW"
+              --view "$QUERY" "$DS"."$VIEW"
     done
 done
