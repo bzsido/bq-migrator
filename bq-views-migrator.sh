@@ -6,8 +6,11 @@ MAX=10000
 
 bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//g' | \
 while read DS; do
-    
-    echo "dataset is $DS"
+   
+    echo "Creating $DS dataset"
+    bq --project_id=$NEWP mk $DS
+
+    echo "Copying views for $DS"
 
     bq ls -n "$MAX" "$DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2 | \
     while read VIEW; do
