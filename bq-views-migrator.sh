@@ -17,22 +17,19 @@ export DS="$(bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//
 create_dataset() {    
     echo "Creating $1 dataset"
     bq --project_id="$NEWP" mk "$1"
-} 
+} export -f create_dataset
 
-export -f create_dataset
-parallel --will-cite -v -j4 --bar create_dataset ::: "$DS"
+parallel --will-cite -v -j4 --progress create_dataset ::: "$DS"
 
 copy_tables() {
     echo "bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2""
     bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2"
-}
-export -f copy_tables
+} export -f copy_tables
 
 for CURRENT_DS in $DS; do
 
     echo "$CURRENT_DS"
     export CURRENT_TABLES="$(bq ls -n "$MAX" "$CURRENT_DS" | grep TABLE | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
-    #echo "$CURRENT_TABLES"
     parallel --will-cite -v -j4 --progress copy_tables "$CURRENT_DS" ::: "$CURRENT_TABLES"
 
 done
@@ -42,16 +39,13 @@ copy_views() {
                 | sed -e 's/^ \{2\}//g' | sed -e "s/$ORIGP/$NEWP/g")"
 
     echo "bq mk --project_id="$NEWP" --use_legacy_sql=false --view <query> "$1"."$2""
-    
-    bq mk --project_id="$NEWP" --use_legacy_sql=false \
-          --view "$QUERY" "$1"."$2"
-}
-export -f copy_views
+    bq mk --project_id="$NEWP" --use_legacy_sql=false --view "$QUERY" "$1"."$2"
+} export -f copy_views
 
 for CURRENT_DS in $DS; do
 
     echo "$CURRENT_DS"
     export CURRENT_VIEWS="$(bq ls -n "$MAX" "$CURRENT_DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
-    parallel --will-cite -v -j4 --bar copy_views "$CURRENT_DS" ::: "$CURRENT_VIEWS"
+    parallel --will-cite -v -j4 --progress copy_views "$CURRENT_DS" ::: "$CURRENT_VIEWS"
 
 done
