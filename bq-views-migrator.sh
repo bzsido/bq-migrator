@@ -17,14 +17,14 @@ export DS="$(bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//
 create_dataset() {    
     echo "Creating $1 dataset"
     bq --project_id="$NEWP" mk "$1"
-} export -f create_dataset
+}; export -f create_dataset
 
 parallel --will-cite -v -j4 --progress create_dataset ::: "$DS"
 
 copy_tables() {
     echo "bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2""
     bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2"
-} export -f copy_tables
+}; export -f copy_tables
 
 for CURRENT_DS in $DS; do
 
@@ -40,7 +40,7 @@ copy_views() {
 
     echo "bq mk --project_id="$NEWP" --use_legacy_sql=false --view <query> "$1"."$2""
     bq mk --project_id="$NEWP" --use_legacy_sql=false --view "$QUERY" "$1"."$2"
-} export -f copy_views
+}; export -f copy_views
 
 for CURRENT_DS in $DS; do
 
