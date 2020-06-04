@@ -1,39 +1,57 @@
 #/bin/bash
 
-ORIGP="$1" #"crypto-song-153217"
-NEWP="$2" #"al-bi-bq-prod"
-MAX=10000
+# You need to install parallel and gcloud first to be able to use this script
 
-bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//g' | \
-while read DS; do
-   
-    # do it with while read
-    echo "Creating $DS dataset"
-    bq --project_id="$NEWP" mk "$DS"
+if [ $# -lt 2 ]; then
+    echo "Please enter the following args: <source-project-id> <new-project-id>"
+    exit 1
+fi
 
-    # do it with parallel first
-    echo "Copying tables for $DS"
+export ORIGP="$1"
+export NEWP="$2"
+export MAX=10000
+#export PARAL_ARGS="--will-cite -v -j4 --bar --dry-run"
 
-    bq ls -n "$MAX" "$DS" | grep TABLE | sed -e 's/ \+/ /g' | cut -d' ' -f2 | \
-    while read TABLE; do
-        
-        # -a append
-        # -n don't overwrite existing table
-        bq cp -n "$ORIGP":"$DS"."$TABLE" "$NEWP":"$DS"."$TABLE"
+export DS="$(bq --project_id="$ORIGP" ls -n "$MAX" | tail -n +3 | sed -e 's/ *//g')"
 
-    done
+create_dataset() {    
+    echo "Creating $1 dataset"
+    bq --project_id="$NEWP" mk "$1"
+} 
 
-    # do it with parallel after tables are finished
-    echo "Copying views for $DS"
+export -f create_dataset
+parallel --will-cite -v -j4 --bar create_dataset ::: "$DS"
 
-    bq ls -n "$MAX" "$DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2 | \
-    while read VIEW; do
+copy_tables() {
+    echo "bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2""
+    bq cp -n "$ORIGP":"$1"."$2" "$NEWP":"$1"."$2"
+}
+export -f copy_tables
 
-        QUERY="$(bq show --format=sparse --view "$DS"."$VIEW" | tail -n +5 \
+for CURRENT_DS in $DS; do
+
+    echo "$CURRENT_DS"
+    export CURRENT_TABLES="$(bq ls -n "$MAX" "$CURRENT_DS" | grep TABLE | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
+    #echo "$CURRENT_TABLES"
+    parallel --will-cite -v -j4 --progress copy_tables "$CURRENT_DS" ::: "$CURRENT_TABLES"
+
+done
+
+copy_views() {
+    QUERY="$(bq show --format=sparse --view "$1"."$2" | tail -n +5 \
                 | sed -e 's/^ \{2\}//g' | sed -e "s/$ORIGP/$NEWP/g")"
 
-        # think about legacy sql param
-        bq mk --project_id="$NEWP" --use_legacy_sql=false \
-              --view "$QUERY" "$DS"."$VIEW"
-    done
+    echo "bq mk --project_id="$NEWP" --use_legacy_sql=false --view <query> "$1"."$2""
+    
+    bq mk --project_id="$NEWP" --use_legacy_sql=false \
+          --view "$QUERY" "$1"."$2"
+}
+export -f copy_views
+
+for CURRENT_DS in $DS; do
+
+    echo "$CURRENT_DS"
+    export CURRENT_VIEWS="$(bq ls -n "$MAX" "$CURRENT_DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
+    parallel --will-cite -v -j4 --bar copy_views "$CURRENT_DS" ::: "$CURRENT_VIEWS"
+
 done
