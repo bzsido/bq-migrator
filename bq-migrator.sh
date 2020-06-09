@@ -29,13 +29,13 @@ copy_tables() {
 for CURRENT_DS in $DS; do
 
     echo "$CURRENT_DS"
-    export CURRENT_TABLES="$(bq ls -n "$MAX" "$CURRENT_DS" | grep TABLE | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
+    export CURRENT_TABLES="$(bq --project_id="$ORIGP" ls -n "$MAX" "$CURRENT_DS" | grep TABLE | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
     parallel --will-cite -v -j4 --progress copy_tables "$CURRENT_DS" ::: "$CURRENT_TABLES"
 
 done
 
 copy_views() {
-    QUERY="$(bq show --format=sparse --view "$1"."$2" | tail -n +5 \
+    QUERY="$(bq --project_id="$ORIGP" show --format=sparse --view "$1"."$2" | tail -n +5 \
                 | sed -e 's/^ \{2\}//g' | sed -e "s/$ORIGP/$NEWP/g")"
 
     echo "bq mk --project_id="$NEWP" --use_legacy_sql=false --view <query> "$1"."$2""
@@ -45,7 +45,7 @@ copy_views() {
 for CURRENT_DS in $DS; do
 
     echo "$CURRENT_DS"
-    export CURRENT_VIEWS="$(bq ls -n "$MAX" "$CURRENT_DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
+    export CURRENT_VIEWS="$(bq --project_id="$ORIGP" ls -n "$MAX" "$CURRENT_DS" | grep VIEW | sed -e 's/ \+/ /g' | cut -d' ' -f2)"
     parallel --will-cite -v -j4 --progress copy_views "$CURRENT_DS" ::: "$CURRENT_VIEWS"
 
 done
